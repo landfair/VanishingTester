@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vanishing Point Convergence Tester</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: #0f0f0f;
+    color: #e8e8e8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 18px 28px 14px;
+    border-bottom: 1px solid #2a2a2a;
+    background: #141414;
+  }
+
+  header h1 {
+    font-size: 1.35rem;
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    color: #f0f0f0;
+  }
+
+  header p.subtitle {
+    font-size: 0.78rem;
+    color: #888;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .credit {
+    font-size: 0.72rem;
+    color: #666;
+    margin-top: 6px;
+  }
+
+  .credit a {
+    color: #9db4cc;
+    text-decoration: none;
+  }
+
+  .credit a:hover { text-decoration: underline; }
+
+  .app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    min-width: 220px;
+    background: #181818;
+    border-right: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 14px;
+    overflow-y: auto;
+  }
+
+  .sidebar h2 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #666;
+    margin-bottom: 2px;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1px dashed #3a3a3a;
+    border-radius: 6px;
+    padding: 22px 12px;
+    text-align: center;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.82rem;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #5a8abf;
+    color: #9db4cc;
+  }
+
+  .upload-zone .icon { font-size: 1.6rem; margin-bottom: 6px; }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .mode-toggle button {
+    flex: 1;
+    padding: 8px 6px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .mode-toggle button.active {
+    background: #2a3a4a;
+    color: #9db4cc;
+  }
+
+  .mode-toggle button:hover:not(.active) {
+    background: #222;
+    color: #bbb;
+  }
+
+  /* Groups */
+  .group-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .group-item {
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    position: relative;
+  }
+
+  .group-item.selected { border-color: #5a8abf; }
+
+  .group-item .group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .group-name {
+    font-size: 0.82rem;
+    flex: 1;
+    color: #ccc;
+  }
+
+  .group-del {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  .group-del:hover { color: #c06060; }
+
+  .group-stats {
+    font-size: 0.7rem;
+    color: #777;
+    margin-top: 5px;
+  }
+
+  .convergence-score {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+  }
+
+  .score-good { background: #1a3a1a; color: #6dbb6d; }
+  .score-mid  { background: #3a3010; color: #c8aa44; }
+  .score-bad  { background: #3a1a1a; color: #cc6666; }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 5px;
+    border: 1px solid #2a2a2a;
+    background: #1e1e1e;
+    color: #ccc;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .btn:hover { background: #252525; border-color: #444; }
+
+  .btn-primary {
+    background: #1c2e40;
+    border-color: #2e4e6e;
+    color: #9db4cc;
+  }
+
+  .btn-primary:hover { background: #223548; }
+
+  .btn-danger {
+    background: #2a1010;
+    border-color: #5a2020;
+    color: #cc6666;
+  }
+
+  .btn-danger:hover { background: #331212; }
+
+  /* Instructions */
+  .instructions {
+    font-size: 0.72rem;
+    color: #666;
+    line-height: 1.6;
+    border-top: 1px solid #222;
+    padding-top: 12px;
+  }
+
+  .instructions b { color: #9db4cc; font-weight: normal; }
+
+  /* ── Canvas area ── */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #0c0c0c;
+    position: relative;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+
+  #imgCanvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  #drawCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+  }
+
+  #interactCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    cursor: crosshair;
+  }
+
+  .placeholder {
+    text-align: center;
+    color: #444;
+  }
+
+  .placeholder .big { font-size: 3rem; margin-bottom: 12px; }
+  .placeholder p { font-size: 0.9rem; }
+
+  /* Hidden input */
+  #fileInput { display: none; }
+
+  /* Options row */
+  .options-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .options-row label {
+    font-size: 0.75rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .options-row input[type=checkbox] { accent-color: #5a8abf; }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    background: #222;
+    border: 1px solid #444;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    color: #ccc;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vanishing Point Convergence Tester</h1>
+  <p class="subtitle">Draw lines along parallel edges in an image — real photos converge at a single vanishing point; AI-generated images often don't.</p>
+  <p class="credit">
+    Technique developed by <a href="https://farid.berkeley.edu/" target="_blank">Hany Farid</a> (UC Berkeley) and collaborators in digital forensics.
+    Based on research described in <em>Science</em>, 2025. Tool inspired by Farid's work on geometry-based deepfake detection.
+  </p>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div>
+      <h2>Image</h2>
+      <div class="upload-zone" id="uploadZone">
+        <div class="icon">🖼</div>
+        <div>Click or drag an image here</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div>
+      <h2>Drawing Mode</h2>
+      <div class="mode-toggle">
+        <button id="btnPoints" class="active" title="Click two points to define a line">Point Pair</button>
+        <button id="btnDrag" title="Click and drag to draw a line">Drag Draw</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>Line Groups</h2>
+      <div class="group-list" id="groupList"></div>
+      <button class="btn btn-primary" id="btnAddGroup" style="margin-top:8px">+ New Group</button>
+    </div>
+
+    <div>
+      <h2>Options</h2>
+      <div class="options-row">
+        <label><input type="checkbox" id="chkExtend" checked> Extend lines</label>
+        <label><input type="checkbox" id="chkShowVP" checked> Show vanishing pt</label>
+      </div>
+    </div>
+
+    <div>
+      <h2>Actions</h2>
+      <button class="btn" id="btnUndo">↩ Undo last line</button>
+      <button class="btn btn-danger" id="btnClearAll" style="margin-top:6px">✕ Clear all lines</button>
+    </div>
+
+    <div class="instructions">
+      <b>How to use:</b><br>
+      1. Upload an image.<br>
+      2. Add a line group (each gets its own color).<br>
+      3. Select a group, then draw lines along parallel edges (floor tiles, walls, object edges).<br>
+      4. Extended lines show whether they converge — real images should meet at a single vanishing point.<br><br>
+      <b>Convergence score:</b> lower = better convergence = more likely real.
+    </div>
+  </div>
+
+  <!-- Canvas area -->
+  <div class="canvas-area" id="canvasArea">
+    <div class="placeholder" id="placeholder">
+      <div class="big">📐</div>
+      <p>Upload an image to begin</p>
+    </div>
+    <div class="canvas-wrap" id="canvasWrap" style="display:none">
+      <canvas id="imgCanvas"></canvas>
+      <canvas id="drawCanvas"></canvas>
+      <canvas id="interactCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+
+const PALETTE = [
+  '#5b9bd5', '#e36b4f', '#6dbb6d', '#c8aa44',
+  '#c06ab0', '#5bbdbd', '#e6804e', '#aaaaff'
+];
+
+let groups = [];          // [{id, name, color, lines:[{x1,y1,x2,y2}]}]
+let selectedGroupId = null;
+let drawMode = 'points';  // 'points' | 'drag'
+let pendingPoint = null;  // for point-pair mode
+let dragging = false;
+let dragStart = null;
+
+let imageLoaded = false;
+let naturalW = 0, naturalH = 0;
+
+// ─── DOM refs ────────────────────────────────────────────────────────────────
+
+const uploadZone   = document.getElementById('uploadZone');
+const fileInput    = document.getElementById('fileInput');
+const placeholder  = document.getElementById('placeholder');
+const canvasWrap   = document.getElementById('canvasWrap');
+const imgCanvas    = document.getElementById('imgCanvas');
+const drawCanvas   = document.getElementById('drawCanvas');
+const interactCanvas = document.getElementById('interactCanvas');
+const groupList    = document.getElementById('groupList');
+const btnAddGroup  = document.getElementById('btnAddGroup');
+const btnPoints    = document.getElementById('btnPoints');
+const btnDrag      = document.getElementById('btnDrag');
+const chkExtend    = document.getElementById('chkExtend');
+const chkShowVP    = document.getElementById('chkShowVP');
+const btnUndo      = document.getElementById('btnUndo');
+const btnClearAll  = document.getElementById('btnClearAll');
+const tooltip      = document.getElementById('tooltip');
+
+const imgCtx       = imgCanvas.getContext('2d');
+const drawCtx      = drawCanvas.getContext('2d');
+const ixCtx        = interactCanvas.getContext('2d');
+
+// ─── Upload ──────────────────────────────────────────────────────────────────
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  loadFile(e.dataTransfer.files[0]);
+});
+
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadImage(ev.target.result);
+  reader.readAsDataURL(file);
+}
+
+function loadImage(src) {
+  const img = new Image();
+  img.onload = () => {
+    naturalW = img.naturalWidth;
+    naturalH = img.naturalHeight;
+
+    // Size canvas to container
+    const area = document.getElementById('canvasArea');
+    const maxW = area.clientWidth  - 32;
+    const maxH = area.clientHeight - 32;
+    const scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
+    const w = Math.round(naturalW * scale);
+    const h = Math.round(naturalH * scale);
+
+    [imgCanvas, drawCanvas, interactCanvas].forEach(c => {
+      c.width = w; c.height = h;
+    });
+
+    imgCtx.drawImage(img, 0, 0, w, h);
+
+    placeholder.style.display = 'none';
+    canvasWrap.style.display = 'inline-block';
+
+    imageLoaded = true;
+    groups = [];
+    selectedGroupId = null;
+    pendingPoint = null;
+    renderGroups();
+    redraw();
+
+    // Add a default group
+    addGroup();
+  };
+  img.src = src;
+}
+
+// ─── Groups ──────────────────────────────────────────────────────────────────
+
+function addGroup() {
+  const id = Date.now();
+  const color = PALETTE[groups.length % PALETTE.length];
+  groups.push({ id, name: `Group ${groups.length + 1}`, color, lines: [] });
+  selectedGroupId = id;
+  renderGroups();
+  redraw();
+}
+
+function deleteGroup(id) {
+  groups = groups.filter(g => g.id !== id);
+  if (selectedGroupId === id) selectedGroupId = groups.length ? groups[groups.length-1].id : null;
+  renderGroups();
+  redraw();
+}
+
+function getSelectedGroup() {
+  return groups.find(g => g.id === selectedGroupId) || null;
+}
+
+function renderGroups() {
+  groupList.innerHTML = '';
+  groups.forEach(g => {
+    const stats = computeConvergence(g.lines, imgCanvas.width, imgCanvas.height);
+    const div = document.createElement('div');
+    div.className = 'group-item' + (g.id === selectedGroupId ? ' selected' : '');
+    div.innerHTML = `
+      <div class="group-header">
+        <div class="color-dot" style="background:${g.color}"></div>
+        <span class="group-name">${g.name}</span>
+        <button class="group-del" data-id="${g.id}" title="Delete group">✕</button>
+      </div>
+      <div class="group-stats">
+        ${g.lines.length} line${g.lines.length !== 1 ? 's' : ''}
+        ${stats ? `<br>${scoreTag(stats)}` : ''}
+      </div>
+    `;
+    div.addEventListener('click', e => {
+      if (e.target.closest('.group-del')) return;
+      selectedGroupId = g.id;
+      pendingPoint = null;
+      renderGroups();
+      redraw();
+    });
+    div.querySelector('.group-del').addEventListener('click', e => {
+      e.stopPropagation();
+      deleteGroup(g.id);
+    });
+    groupList.appendChild(div);
+  });
+}
+
+function scoreTag(stats) {
+  // stats.error is mean distance from VP (in pixels) — lower is better
+  const err = stats.error;
+  let cls, label;
+  if (err < 15)       { cls = 'score-good'; label = `Converges well (±${err.toFixed(0)}px)`; }
+  else if (err < 50)  { cls = 'score-mid';  label = `Moderate spread (±${err.toFixed(0)}px)`; }
+  else                { cls = 'score-bad';  label = `Poor convergence (±${err.toFixed(0)}px)`; }
+  return `<span class="convergence-score ${cls}">${label}</span>`;
+}
+
+// ─── Mode toggle ─────────────────────────────────────────────────────────────
+
+btnPoints.addEventListener('click', () => setMode('points'));
+btnDrag.addEventListener('click',   () => setMode('drag'));
+
+function setMode(m) {
+  drawMode = m;
+  pendingPoint = null;
+  btnPoints.classList.toggle('active', m === 'points');
+  btnDrag.classList.toggle('active',   m === 'drag');
+  redraw();
+}
+
+// ─── Interaction ─────────────────────────────────────────────────────────────
+
+function canvasPos(e) {
+  const rect = interactCanvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+interactCanvas.addEventListener('mousedown', e => {
+  if (!imageLoaded || !getSelectedGroup()) return;
+  const pos = canvasPos(e);
+
+  if (drawMode === 'drag') {
+    dragging = true;
+    dragStart = pos;
+  } else {
+    // Point-pair mode
+    if (!pendingPoint) {
+      pendingPoint = pos;
+      redraw();
+    } else {
+      addLine(pendingPoint.x, pendingPoint.y, pos.x, pos.y);
+      pendingPoint = null;
+    }
+  }
+});
+
+interactCanvas.addEventListener('mousemove', e => {
+  if (!imageLoaded) return;
+  const pos = canvasPos(e);
+
+  // Show tooltip
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top  = (e.clientY - 20) + 'px';
+  if (!getSelectedGroup()) {
+    tooltip.textContent = 'Select or add a group first';
+  } else if (drawMode === 'points' && pendingPoint) {
+    tooltip.textContent = 'Click to set second point';
+  } else if (drawMode === 'drag' && dragging) {
+    tooltip.textContent = 'Release to finish line';
+  } else {
+    tooltip.textContent = drawMode === 'points' ? 'Click to set first point' : 'Click & drag to draw';
+  }
+
+  if (dragging && dragStart) {
+    redraw(pos);
+  } else if (drawMode === 'points' && pendingPoint) {
+    redraw(pos);
+  }
+});
+
+interactCanvas.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+  redraw();
+});
+
+interactCanvas.addEventListener('mouseup', e => {
+  if (!dragging) return;
+  const pos = canvasPos(e);
+  if (Math.hypot(pos.x - dragStart.x, pos.y - dragStart.y) > 5) {
+    addLine(dragStart.x, dragStart.y, pos.x, pos.y);
+  }
+  dragging = false;
+  dragStart = null;
+});
+
+function addLine(x1, y1, x2, y2) {
+  const g = getSelectedGroup();
+  if (!g) return;
+  g.lines.push({ x1, y1, x2, y2 });
+  renderGroups();
+  redraw();
+}
+
+// ─── Undo / Clear ────────────────────────────────────────────────────────────
+
+btnUndo.addEventListener('click', () => {
+  const g = getSelectedGroup();
+  if (g && g.lines.length) {
+    g.lines.pop();
+    pendingPoint = null;
+    renderGroups();
+    redraw();
+  }
+});
+
+btnClearAll.addEventListener('click', () => {
+  groups.forEach(g => g.lines = []);
+  pendingPoint = null;
+  renderGroups();
+  redraw();
+});
+
+// ─── Options ─────────────────────────────────────────────────────────────────
+
+chkExtend.addEventListener('change', redraw);
+chkShowVP.addEventListener('change', redraw);
+
+btnAddGroup.addEventListener('click', () => { if (imageLoaded) addGroup(); });
+
+// ─── Geometry helpers ────────────────────────────────────────────────────────
+
+// Extend a segment (x1,y1)→(x2,y2) to fill the canvas
+function extendLine(x1, y1, x2, y2, W, H) {
+  const dx = x2 - x1, dy = y2 - y1;
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return { x1, y1, x2, y2 };
+
+  // Parameterise: point = (x1 + t*dx, y1 + t*dy)
+  // Find t for canvas bounds
+  const candidates = [];
+  if (Math.abs(dx) > 0.001) {
+    candidates.push(-x1 / dx);          // left x=0
+    candidates.push((W - x1) / dx);     // right x=W
+  }
+  if (Math.abs(dy) > 0.001) {
+    candidates.push(-y1 / dy);          // top y=0
+    candidates.push((H - y1) / dy);     // bottom y=H
+  }
+
+  const pts = candidates
+    .map(t => ({ t, x: x1 + t*dx, y: y1 + t*dy }))
+    .filter(p => p.x >= -0.5 && p.x <= W+0.5 && p.y >= -0.5 && p.y <= H+0.5);
+
+  if (pts.length < 2) return { x1, y1, x2, y2 };
+  pts.sort((a, b) => a.t - b.t);
+  const first = pts[0], last = pts[pts.length-1];
+  return { x1: first.x, y1: first.y, x2: last.x, y2: last.y };
+}
+
+// Intersect two lines (infinite) defined by (x1,y1)→(x2,y2)
+function lineIntersect(l1, l2) {
+  const dx1 = l1.x2 - l1.x1, dy1 = l1.y2 - l1.y1;
+  const dx2 = l2.x2 - l2.x1, dy2 = l2.y2 - l2.y1;
+  const denom = dx1 * dy2 - dy1 * dx2;
+  if (Math.abs(denom) < 1e-10) return null; // parallel
+  const t = ((l2.x1 - l1.x1) * dy2 - (l2.y1 - l1.y1) * dx2) / denom;
+  return { x: l1.x1 + t * dx1, y: l1.y1 + t * dy1 };
+}
+
+// Distance from point (px,py) to the infinite line through (x1,y1)→(x2,y2)
+function pointLineDistance(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return Math.hypot(px - x1, py - y1);
+  return Math.abs(dy * px - dx * py + x2 * y1 - y2 * x1) / len;
+}
+
+// Compute vanishing point as weighted least-squares intersection of all line pairs
+function computeConvergence(lines, W, H) {
+  if (lines.length < 2) return null;
+
+  // Collect all pairwise intersections, filter out wildly far ones
+  const pts = [];
+  for (let i = 0; i < lines.length; i++) {
+    for (let j = i+1; j < lines.length; j++) {
+      const pt = lineIntersect(lines[i], lines[j]);
+      if (pt) pts.push(pt);
+    }
+  }
+  if (!pts.length) return null;
+
+  // Estimate VP as median of intersections (robust to outliers)
+  pts.sort((a,b) => a.x - b.x);
+  const mx = pts[Math.floor(pts.length/2)].x;
+  pts.sort((a,b) => a.y - b.y);
+  const my = pts[Math.floor(pts.length/2)].y;
+  const vp = { x: mx, y: my };
+
+  // Mean distance from each line to this VP
+  const dists = lines.map(l => pointLineDistance(vp.x, vp.y, l.x1, l.y1, l.x2, l.y2));
+  const error = dists.reduce((s,d) => s+d, 0) / dists.length;
+
+  return { vp, error, intersections: pts };
+}
+
+// ─── Rendering ───────────────────────────────────────────────────────────────
+
+function redraw(mousePos) {
+  if (!imageLoaded) return;
+  const W = drawCanvas.width, H = drawCanvas.height;
+  drawCtx.clearRect(0, 0, W, H);
+  ixCtx.clearRect(0, 0, W, H);
+
+  const extend = chkExtend.checked;
+  const showVP = chkShowVP.checked;
+
+  // Draw all groups
+  groups.forEach(g => {
+    const isSelected = g.id === selectedGroupId;
+    const alpha = isSelected ? 1 : 0.5;
+
+    drawCtx.save();
+    drawCtx.globalAlpha = alpha;
+
+    const stats = g.lines.length >= 2 ? computeConvergence(g.lines, W, H) : null;
+
+    g.lines.forEach(line => {
+      const ext = extend ? extendLine(line.x1, line.y1, line.x2, line.y2, W, H) : line;
+
+      // Extended (dimmed)
+      if (extend) {
+        drawCtx.beginPath();
+        drawCtx.moveTo(ext.x1, ext.y1);
+        drawCtx.lineTo(ext.x2, ext.y2);
+        drawCtx.strokeStyle = g.color;
+        drawCtx.lineWidth = 1;
+        drawCtx.setLineDash([4, 6]);
+        drawCtx.globalAlpha = alpha * 0.35;
+        drawCtx.stroke();
+        drawCtx.setLineDash([]);
+      }
+
+      // Core segment
+      drawCtx.beginPath();
+      drawCtx.moveTo(line.x1, line.y1);
+      drawCtx.lineTo(line.x2, line.y2);
+      drawCtx.strokeStyle = g.color;
+      drawCtx.lineWidth = isSelected ? 2 : 1.5;
+      drawCtx.globalAlpha = alpha;
+      drawCtx.stroke();
+
+      // Endpoint dots
+      [{ x: line.x1, y: line.y1 }, { x: line.x2, y: line.y2 }].forEach(p => {
+        drawCtx.beginPath();
+        drawCtx.arc(p.x, p.y, 3.5, 0, Math.PI*2);
+        drawCtx.fillStyle = g.color;
+        drawCtx.globalAlpha = alpha;
+        drawCtx.fill();
+      });
+    });
+
+    // Vanishing point
+    if (showVP && stats && isSelected) {
+      const vp = stats.vp;
+      // Halo
+      drawCtx.globalAlpha = 0.2;
+      drawCtx.beginPath();
+      drawCtx.arc(vp.x, vp.y, 18, 0, Math.PI*2);
+      drawCtx.fillStyle = g.color;
+      drawCtx.fill();
+      // Core
+      drawCtx.globalAlpha = 1;
+      drawCtx.beginPath();
+      drawCtx.arc(vp.x, vp.y, 6, 0, Math.PI*2);
+      drawCtx.fillStyle = g.color;
+      drawCtx.fill();
+      drawCtx.strokeStyle = '#fff';
+      drawCtx.lineWidth = 1.5;
+      drawCtx.stroke();
+
+      // VP label
+      const isOnCanvas = vp.x >= 0 && vp.x <= W && vp.y >= 0 && vp.y <= H;
+      if (isOnCanvas) {
+        drawCtx.font = '11px monospace';
+        drawCtx.fillStyle = g.color;
+        drawCtx.globalAlpha = 0.9;
+        drawCtx.fillText(`VP (${Math.round(vp.x)}, ${Math.round(vp.y)})`, vp.x + 10, vp.y - 8);
+      } else {
+        // Draw arrow pointing toward off-canvas VP
+        const cx = W/2, cy = H/2;
+        const ang = Math.atan2(vp.y - cy, vp.x - cx);
+        const ar = 36;
+        const ax = cx + Math.cos(ang) * (Math.min(W,H)/2 - 40);
+        const ay = cy + Math.sin(ang) * (Math.min(W,H)/2 - 40);
+        drawCtx.globalAlpha = 0.85;
+        drawArrow(drawCtx, ax, ay, ax + Math.cos(ang)*ar, ay + Math.sin(ang)*ar, g.color);
+        drawCtx.font = '11px monospace';
+        drawCtx.fillStyle = g.color;
+        drawCtx.fillText('VP →', ax + Math.cos(ang)*ar + 6, ay + Math.sin(ang)*ar + 4);
+      }
+    }
+
+    drawCtx.restore();
+  });
+
+  // Preview line (interact canvas)
+  const g = getSelectedGroup();
+  if (g) {
+    ixCtx.save();
+    ixCtx.setLineDash([5, 5]);
+    ixCtx.strokeStyle = g.color;
+    ixCtx.lineWidth = 1.5;
+    ixCtx.globalAlpha = 0.7;
+
+    if (drawMode === 'points' && pendingPoint && mousePos) {
+      // Pending first-point dot
+      ixCtx.setLineDash([]);
+      ixCtx.beginPath();
+      ixCtx.arc(pendingPoint.x, pendingPoint.y, 4, 0, Math.PI*2);
+      ixCtx.fillStyle = g.color;
+      ixCtx.fill();
+
+      // Preview line
+      ixCtx.setLineDash([5,5]);
+      ixCtx.beginPath();
+      ixCtx.moveTo(pendingPoint.x, pendingPoint.y);
+      ixCtx.lineTo(mousePos.x, mousePos.y);
+      ixCtx.stroke();
+
+    } else if (drawMode === 'drag' && dragging && dragStart && mousePos) {
+      ixCtx.beginPath();
+      ixCtx.moveTo(dragStart.x, dragStart.y);
+      ixCtx.lineTo(mousePos.x, mousePos.y);
+      ixCtx.stroke();
+    }
+
+    ixCtx.restore();
+  }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color) {
+  const ang = Math.atan2(y2-y1, x2-x1);
+  const len = 10, spread = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - len*Math.cos(ang-spread), y2 - len*Math.sin(ang-spread));
+  ctx.lineTo(x2 - len*Math.cos(ang+spread), y2 - len*Math.sin(ang+spread));
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ─── Window resize ───────────────────────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  // Re-render at same logical size (canvas dimensions stay fixed after image load)
+  redraw();
+});
+</script>
+</body>
+</html>
